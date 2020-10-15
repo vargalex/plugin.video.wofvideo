@@ -1,4 +1,8 @@
-﻿﻿[B]1.0.2[/B]
+﻿[B]1.0.3[/B]
+- Forrás változás követése
+- Keresések mentése
+
+[B]1.0.2[/B]
 - Gyorsitas
 
 [B]1.0.1[/B]

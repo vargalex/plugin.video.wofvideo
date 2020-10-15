@@ -24,18 +24,32 @@ from resources.lib.indexers import navigator
 params = dict(urlparse.parse_qsl(sys.argv[2].replace('?','')))
 action = params.get('action')
 url = params.get('url')
-dataId = params.get('dataId')
-dataViews = params.get('dataViews')
+title = params.get('title')
+post = params.get('post')
+season = params.get('season')
+desc = params.get('desc')
 
 n = navigator.navigator()
 if action == None:
     n.root()
 
 elif action == 'category':
-    n.getCategory(url, dataId, dataViews)
+    n.getCategory(url)
+
+elif action == 'seasons':
+    n.getSeasons(url)
+
+elif action == 'episodes':
+    n.getEpisodes(title, post, season, desc)
 
 elif action == 'playmovie':
     n.playmovie(url)
 
 elif action == 'search':
+    n.getSearches()
+
+elif action == 'newsearch':
     n.doSearch()
+
+elif action == 'deletesearchhistory':
+    n.deleteSearchHistory()
