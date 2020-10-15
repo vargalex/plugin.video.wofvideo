@@ -147,6 +147,7 @@ class navigator:
                             xbmc.log('wofvideo: playing URL: %s' % matches.group(3), xbmc.LOGNOTICE)
                             play_item = xbmcgui.ListItem(path=matches.group(3))
                             xbmcplugin.setResolvedUrl(syshandle, True, listitem=play_item)
+                            return
                         except Exception as e:
                             xbmc.log('wofvideo: unable to playing URL: %s' % url, xbmc.LOGERROR)
                             xbmcgui.Dialog().notification(url, e.message)
