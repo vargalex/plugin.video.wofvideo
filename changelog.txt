@@ -1,0 +1,8 @@
+﻿﻿[B]1.0.2[/B]
+- Gyorsitas
+
+[B]1.0.1[/B]
+- Kategória szűrés a beállitásokban
+
+[B]1.0.0[/B]
+- Első verzió
