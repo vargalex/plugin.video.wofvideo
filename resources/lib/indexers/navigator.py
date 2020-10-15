@@ -151,6 +151,7 @@ class navigator:
                             xbmc.log('wofvideo: unable to playing URL: %s' % url, xbmc.LOGERROR)
                             xbmcgui.Dialog().notification(url, e.message)
                             return
+                            
     def getSearches(self):
         self.addDirectoryItem('Új keresés', 'newsearch', '', 'DefaultFolder.png')
         try:
