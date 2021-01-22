@@ -1,4 +1,7 @@
-﻿[B]1.0.3[/B]
+﻿[B]1.0.4[/B]
+- Forrás link módosítása
+
+[B]1.0.3[/B]
 - Forrás változás követése
 - Keresések mentése
 

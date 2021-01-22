@@ -25,7 +25,7 @@ from requests import Session
 sysaddon = sys.argv[0] ; syshandle = int(sys.argv[1])
 addonFanart = xbmcaddon.Addon().getAddonInfo('fanart')
 
-base_url = 'https://wofvideo.club/'
+base_url = 'https://mindenegyhelyen.online/'
 ajax_url = '%s%s' % (base_url, 'wp-admin/admin-ajax.php')
 session = Session()
 
