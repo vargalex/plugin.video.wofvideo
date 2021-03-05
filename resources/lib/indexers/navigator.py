@@ -58,7 +58,7 @@ class navigator:
     def getCategory(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        xbmc.log('wofvideo: load URL: %s' % url, xbmc.LOGNOTICE)
+        xbmc.log('wofvideo: load URL: %s' % url, xbmc.LOGINFO)
 
         allmovies = soup.find('div', attrs={'class': 'aa-cn', 'id': 'aa-movies'})
         movies = allmovies.find_all('li', attrs={'class': 'hentry'})
@@ -113,7 +113,7 @@ class navigator:
         data = {'action': 'action_select_season', 'season': season, 'post': post}
         page = session.post(ajax_url, data)
         soup = BeautifulSoup(page.text, 'html.parser')
-        xbmc.log('wofvideo: load URL: %s' % ajax_url, xbmc.LOGNOTICE)
+        xbmc.log('wofvideo: load URL: %s' % ajax_url, xbmc.LOGINFO)
         articles = soup.find_all('article')
         for article in articles:
             img = article.find('img').get('src')
@@ -144,12 +144,12 @@ class navigator:
                     matches=re.search(r'^(.*)source:([^\']*)\'([^\']*)\'(.*)', videoSource, re.S)
                     if matches != None:
                         try:
-                            xbmc.log('wofvideo: playing URL: %s' % matches.group(3), xbmc.LOGNOTICE)
+                            xbmc.log('wofvideo: playing URL: %s' % matches.group(3), xbmc.LOGINFO)
                             play_item = xbmcgui.ListItem(path=matches.group(3))
                             xbmcplugin.setResolvedUrl(syshandle, True, listitem=play_item)
                         except Exception as e:
                             xbmc.log('wofvideo: unable to playing URL: %s' % url, xbmc.LOGERROR)
-                            xbmcgui.Dialog().notification(url, e.message)
+                            xbmcgui.Dialog().notification(url, str(e))
                             return
                             
     def getSearches(self):
