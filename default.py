@@ -17,11 +17,17 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
-
-import urlparse,sys
+import sys
 from resources.lib.indexers import navigator
 
-params = dict(urlparse.parse_qsl(sys.argv[2].replace('?','')))
+if sys.version_info[0] == 3:
+    from urllib.parse import parse_qsl
+else:
+    from urlparse import parse_qsl
+
+
+params = dict(parse_qsl(sys.argv[2].replace('?','')))
+
 action = params.get('action')
 url = params.get('url')
 title = params.get('title')
