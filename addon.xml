@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.wofvideo" name="wofvideo" version="1.0.6" provider-name="btibi,vargalex">
+<addon id="plugin.video.wofvideo" name="wofvideo" version="1.0.7" provider-name="btibi,vargalex">
 	<requires>
 		<import addon="script.module.beautifulsoup4" version="4.6.2"/>
 		<import addon="script.module.requests" version="2.22.0"/>
@@ -13,6 +13,7 @@
 		<language>hu</language>
 		<platform>all</platform>
 		<news>
+			1.0.7 - Keresési előzmények javítása
 			1.0.6 - Matrix kompatibilitás
 			1.0.5 - forrás link vissza
 			1.0.4 - forrás link módosítása
