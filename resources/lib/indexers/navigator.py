@@ -21,6 +21,7 @@
 import os,sys,re,xbmc,xbmcgui,xbmcplugin,xbmcaddon, locale
 from bs4 import BeautifulSoup
 from requests import Session
+from resources.lib.modules.utils import py2_decode
 
 sysaddon = sys.argv[0] ; syshandle = int(sys.argv[1])
 addonFanart = xbmcaddon.Addon().getAddonInfo('fanart')
@@ -35,7 +36,7 @@ class navigator:
             locale.setlocale(locale.LC_ALL, "")
         except:
             pass
-        self.base_path = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))
+        self.base_path = py2_decode(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')))
         self.searchFileName = os.path.join(self.base_path, "search.history")
 
     def root(self):
