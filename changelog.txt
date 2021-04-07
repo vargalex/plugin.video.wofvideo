@@ -1,4 +1,7 @@
-﻿[B]1.0.8[/B]
+﻿[B]1.0.9[/B]
+- modules __init__.py pótolva
+
+[B]1.0.8[/B]
 - Profile path dekódolás
 
 [B]1.0.7[/B]
