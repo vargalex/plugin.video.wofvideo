@@ -1,4 +1,8 @@
-﻿[B]1.0.9[/B]
+﻿[B]1.0.10[/B]
+- encrypted linkek támogatása
+- nexus támogatás
+
+[B]1.0.9[/B]
 - modules __init__.py pótolva
 
 [B]1.0.8[/B]

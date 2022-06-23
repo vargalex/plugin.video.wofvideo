@@ -18,7 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-import os,sys,re,xbmc,xbmcgui,xbmcplugin,xbmcaddon, locale
+import os,sys,re,xbmc,xbmcgui,xbmcplugin,xbmcaddon, locale, base64
 from bs4 import BeautifulSoup
 from requests import Session
 from resources.lib.modules.utils import py2_decode
@@ -30,13 +30,18 @@ base_url = 'https://wofvideo.club/'
 ajax_url = '%s%s' % (base_url, 'wp-admin/admin-ajax.php')
 session = Session()
 
+if sys.version_info[0] == 3:
+    from xbmcvfs import translatePath
+else:
+    from xbmc import translatePath
+
 class navigator:
     def __init__(self):
         try:
             locale.setlocale(locale.LC_ALL, "")
         except:
             pass
-        self.base_path = py2_decode(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')))
+        self.base_path = py2_decode(translatePath(xbmcaddon.Addon().getAddonInfo('profile')))
         self.searchFileName = os.path.join(self.base_path, "search.history")
 
     def root(self):
@@ -126,32 +131,38 @@ class navigator:
     def playmovie(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        url = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
+        url = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank', 'class': 'maxbutton-1 maxbutton maxbutton-b1'})
         if url != None:
             page = session.get(url.get('href'))
             soup = BeautifulSoup(page.text, 'html.parser')
         else:
             iframeSrc = soup.find('iframe').get('src')
             page = session.get(iframeSrc)
-            soup = BeautifulSoup(page.text, 'html.parser')    
-        iframeSrc = soup.find('iframe').get('src')
-        if iframeSrc != None:
-            page = session.get(iframeSrc)
             soup = BeautifulSoup(page.text, 'html.parser')
-            playlist = soup.find('ul', attrs={'id': 'fwduvpPlaylist0'})
-            if playlist != None:
-                videoSource = playlist.find('li').get('data-video-source')
-                if videoSource != None:
-                    matches=re.search(r'^(.*)source:([^\']*)\'([^\']*)\'(.*)', videoSource, re.S)
-                    if matches != None:
-                        try:
-                            xbmc.log('wofvideo: playing URL: %s' % matches.group(3), xbmc.LOGINFO)
-                            play_item = xbmcgui.ListItem(path=matches.group(3))
-                            xbmcplugin.setResolvedUrl(syshandle, True, listitem=play_item)
-                        except Exception as e:
-                            xbmc.log('wofvideo: unable to playing URL: %s' % url, xbmc.LOGERROR)
-                            xbmcgui.Dialog().notification(url, str(e))
-                            return
+        iframes = soup.find_all('iframe')
+        for iframe in iframes:
+            iframeSrc = iframe.get('src')
+            if iframeSrc != None and not "player.twitch" in iframeSrc:
+                page = session.get(iframeSrc)
+                soup = BeautifulSoup(page.text, 'html.parser')
+                playlist = soup.find('ul', attrs={'id': 'fwduvpPlaylist0'})
+                if playlist != None:
+                    videoSource = playlist.find('li').get('data-video-source')
+                    if videoSource != None:
+                        matches=re.search(r'^(.*)source:([^\']*)\'([^\']*)\'(.*)', videoSource, re.S)
+                        if matches != None:
+                            if "encrypt:" in matches.group(3):
+                                videoURL = base64.b64decode(matches.group(3).replace("encrypt:", "")).decode('utf-8')
+                            else:
+                                videoURL = matches.group(3)
+                            try:
+                                xbmc.log('wofvideo: playing URL: %s' % videoURL, xbmc.LOGINFO)
+                                play_item = xbmcgui.ListItem(path=videoURL)
+                                xbmcplugin.setResolvedUrl(syshandle, True, listitem=play_item)
+                            except Exception as e:
+                                xbmc.log('wofvideo: unable to playing URL: %s' % url, xbmc.LOGERROR)
+                                xbmcgui.Dialog().notification(url, str(e))
+                                return
                             
     def getSearches(self):
         self.addDirectoryItem('Új keresés', 'newsearch', '', 'DefaultFolder.png')
