@@ -38,30 +38,44 @@ else:
 class navigator:
     def __init__(self):
         try:
-            locale.setlocale(locale.LC_ALL, "")
+            locale.setlocale(locale.LC_ALL, "hu_HU.UTF-8")
         except:
-            pass
+            try:
+                locale.setlocale(locale.LC_ALL, "")
+            except:
+                pass
         self.base_path = py2_decode(translatePath(xbmcaddon.Addon().getAddonInfo('profile')))
         self.searchFileName = os.path.join(self.base_path, "search.history")
 
     def root(self):
+        self.addDirectoryItem("Kategóriák", "categories", '', 'DefaultFolder.png')
+        self.addDirectoryItem("Megjelenés éve", "years", '', 'DefaultFolder.png')
+        self.addDirectoryItem("Keresés", "search", '', 'DefaultFolder.png')
+        self.endDirectory()
+
+    def getCategories(self):
         page = session.get(base_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        #xbmcaddon.Addon().setSetting('hash', soup.find('input', attrs={'class': 'main_session'}).get('value'))
-        #xbmcaddon.Addon().setSetting('phpsessid', session.cookies.get('PHPSESSID'))
-        self.addDirectoryItem('Keresés', 'search', '', 'DefaultFolder.png')
-        #for link in soup.find_all('a', href=re.compile("category"), string=True):
         for category in soup.find_all('li', attrs={'class': 'cat-item'}):
             link = category.find('a')
             matches = re.search(r'^(.*)\(([0-9]*)\)(.*)$', str(category), re.S)
             cnt = ''
             if matches != None:
                 cnt = " (%s)" % matches.group(2) 
-            #if xbmcaddon.Addon().getSettingBool('categories.' + categoryUrl.rsplit('/', 1)[1]):
-            self.addDirectoryItem("%s%s" % (link.string, cnt), 'category&url=%s' % link.get('href'), '', 'DefaultFolder.png')
+            self.addDirectoryItem("%s%s" % (link.string, cnt), 'items&url=%s' % link.get('href'), '', 'DefaultFolder.png')
         self.endDirectory()
 
-    def getCategory(self, url):
+    def getYears(self):
+        page = session.get(base_url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        years = soup.find('section', attrs={'id': 'torofilm_movies_annee-2'})
+        for yearli in years.find_all('li'):
+            link = yearli.find('a').get('href')
+            year = yearli.find('a').string
+            self.addDirectoryItem(year, 'items&url=%s' % link, '', 'DefaultFolder.png')
+        self.endDirectory()
+
+    def getItems(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
         xbmc.log('wofvideo: load URL: %s' % url, xbmc.LOGINFO)
@@ -85,13 +99,12 @@ class navigator:
         if navLinks != None:
             hrefs = navLinks.find_all('a')
             if hrefs[len(hrefs)-1].string == 'NEXT':
-                self.addDirectoryItem('[I]Következö oldal[/I]', 'category&url=%s' % hrefs[len(hrefs)-1].get('href'), '', 'DefaultFolder.png')
+                self.addDirectoryItem('[I]Következö oldal[/I]', 'items&url=%s' % hrefs[len(hrefs)-1].get('href'), '', 'DefaultFolder.png')
         self.endDirectory('movies')
 
     def getSeasons(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        #xbmc.log('wofvideo getSeasons: load URL: %s' % url, xbmc.LOGNOTICE)
         movieImg = ''
         article = soup.find('article', attrs={'class': 'post single'})
         if article:
@@ -101,31 +114,33 @@ class navigator:
         header = soup.find('header', attrs={'class': 'entry-header'})
         if header != None:
             title = header.find('h1', attrs={'class': 'entry-title'}).string
-            desc = soup.find('div', attrs={'class': 'description'})
-            if desc != None:
-                desc = desc.find('p')
+            descDiv = soup.find('div', attrs={'class': 'description'})
+            if descDiv != None:
+                desc = descDiv.find('p')
                 if desc != None:
                     desc = desc.string
-                    seasons = soup.find_all('li', attrs={'class': 'sel-temp'})
-                    for season in seasons:
-                        link = season.find('a')
-                        if link != None:
-                            datapost = link.get('data-post')
-                            dataseason = link.get('data-season')
-                            self.addDirectoryItem('[B]%s[/B]' % link.string, 'episodes&title=%s&post=%s&season=%s&desc=%s' % (title, datapost, dataseason, desc), movieImg, 'DefaultMovies.png', isFolder=True, meta={'title': title, 'plot': desc})
+                    seasonUrl = descDiv.find('a').get('href')
+                    if seasonUrl != None:
+                        page = session.get(seasonUrl)
+                        soup = BeautifulSoup(page.text, 'html.parser')
+                        entryContent = soup.find('div', attrs={'class': 'entry-content'})
+                        seasons =entryContent.find_all('ul')
+                        seasonNr = 0
+                        for season in seasons:
+                            seasonNr += 1
+                            self.addDirectoryItem('[B]%d. évad[/B]' % seasonNr, 'episodes&title=%s&season=%d&desc=%s&url=%s&img=%s' % (title, seasonNr, desc, seasonUrl, movieImg), movieImg, 'DefaultMovies.png', isFolder=True, meta={'title': title, 'plot': desc})
         self.endDirectory('tvshows')
 
-    def getEpisodes(self, title, post, season, desc):
-        data = {'action': 'action_select_season', 'season': season, 'post': post}
-        page = session.post(ajax_url, data)
+    def getEpisodes(self, title, season, desc, url, img):
+        page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        xbmc.log('wofvideo: load URL: %s' % ajax_url, xbmc.LOGINFO)
-        articles = soup.find_all('article')
-        for article in articles:
-            img = article.find('img').get('src')
-            episode = article.find('h2', attrs={'class': 'entry-title'}).string
-            href = article.find('a', attrs={'class': 'lnk-blk'}).get('href')
-            self.addDirectoryItem('[B]%s[/B]' % episode, 'playmovie&url=%s' % href, ('https:%s' % img) if img[0:2] == '//' else img, 'DefaultMovies.png', isFolder=False, meta={'title': episode, 'plot': desc})
+        entryContent = soup.find('div', attrs={'class': 'entry-content'})
+        actSeason = entryContent.find_all('ul')[int(season)-1]
+        episodes = actSeason.find_all('li')
+        for episode in episodes:
+            href = episode.find('a').get('href')
+            episodeTitle = episode.find('a').string
+            self.addDirectoryItem('[B]%s[/B]' % episodeTitle, 'playmovie&url=%s' % href, img, 'DefaultMovies.png', isFolder=False, meta={'title': episodeTitle, 'plot': desc})
         self.endDirectory('episodes')
 
     def playmovie(self, url):
@@ -134,10 +149,6 @@ class navigator:
         url = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank', 'class': 'maxbutton-1 maxbutton maxbutton-b1'})
         if url != None:
             page = session.get(url.get('href'))
-            soup = BeautifulSoup(page.text, 'html.parser')
-        else:
-            iframeSrc = soup.find('iframe').get('src')
-            page = session.get(iframeSrc)
             soup = BeautifulSoup(page.text, 'html.parser')
         iframes = soup.find_all('iframe')
         for iframe in iframes:
@@ -177,7 +188,7 @@ class navigator:
                 file.write("\n".join(items))
                 file.close()
             for item in items:
-                self.addDirectoryItem(item, 'category&url=%s?s=%s' % (base_url, item), '', 'DefaultFolder.png')
+                self.addDirectoryItem(item, 'items&url=%s?s=%s' % (base_url, item), '', 'DefaultFolder.png')
             if len(items) > 0:
                 self.addDirectoryItem('Keresési előzmények törlése', 'deletesearchhistory', '', 'DefaultFolder.png') 
         except:
@@ -196,7 +207,7 @@ class navigator:
             file = open(self.searchFileName, "a")
             file.write("%s\n" % search_text)
             file.close()
-            self.getCategory("%s?s=%s" % (base_url, search_text))
+            self.getItems("%s?s=%s" % (base_url, search_text))
 
     def getSearchText(self):
         search_text = ''

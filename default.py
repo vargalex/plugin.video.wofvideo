@@ -31,28 +31,35 @@ params = dict(parse_qsl(sys.argv[2].replace('?','')))
 action = params.get('action')
 url = params.get('url')
 title = params.get('title')
-post = params.get('post')
 season = params.get('season')
 desc = params.get('desc')
+img = params.get('img')
 
 n = navigator.navigator()
+
 if action == None:
     n.root()
 
-elif action == 'category':
-    n.getCategory(url)
+elif action == 'categories':
+    n.getCategories()
+
+elif action == 'years':
+    n.getYears()
+
+elif action == 'search':
+    n.getSearches()
+
+elif action == 'items':
+    n.getItems(url)
 
 elif action == 'seasons':
     n.getSeasons(url)
 
 elif action == 'episodes':
-    n.getEpisodes(title, post, season, desc)
+    n.getEpisodes(title, season, desc, url, img)
 
 elif action == 'playmovie':
     n.playmovie(url)
-
-elif action == 'search':
-    n.getSearches()
 
 elif action == 'newsearch':
     n.doSearch()
