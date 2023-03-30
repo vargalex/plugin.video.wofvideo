@@ -32,8 +32,10 @@ session = Session()
 
 if sys.version_info[0] == 3:
     from xbmcvfs import translatePath
+    from urllib.parse import urlparse
 else:
     from xbmc import translatePath
+    from urlparse import urlparse
 
 class navigator:
     def __init__(self):
@@ -146,14 +148,18 @@ class navigator:
     def playmovie(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        url = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank', 'class': 'maxbutton-1 maxbutton maxbutton-b1'})
-        if url != None:
-            page = session.get(url.get('href'))
+        link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank', 'class': 'maxbutton-1 maxbutton maxbutton-b1'})
+        if link != None:
+            page = session.get(link.get('href'))
             soup = BeautifulSoup(page.text, 'html.parser')
         iframes = soup.find_all('iframe')
         for iframe in iframes:
             iframeSrc = iframe.get('src')
             if iframeSrc != None and not "player.twitch" in iframeSrc:
+                parsed_uri = urlparse(iframeSrc)
+                if len(parsed_uri.scheme) == 0:
+                    parsed_uri = urlparse(url)
+                    iframeSrc = "%s:%s" % (parsed_uri.scheme, iframeSrc)
                 page = session.get(iframeSrc)
                 soup = BeautifulSoup(page.text, 'html.parser')
                 playlist = soup.find('ul', attrs={'id': 'fwduvpPlaylist0'})
@@ -171,8 +177,8 @@ class navigator:
                                 play_item = xbmcgui.ListItem(path=videoURL)
                                 xbmcplugin.setResolvedUrl(syshandle, True, listitem=play_item)
                             except Exception as e:
-                                xbmc.log('wofvideo: unable to playing URL: %s' % url, xbmc.LOGERROR)
-                                xbmcgui.Dialog().notification(url, str(e))
+                                xbmc.log('wofvideo: unable to playing URL: %s' % videoURL, xbmc.LOGERROR)
+                                xbmcgui.Dialog().notification(videoURL, str(e))
                                 return
                             
     def getSearches(self):

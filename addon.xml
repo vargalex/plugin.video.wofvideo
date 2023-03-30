@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.wofvideo" name="wofvideo" version="1.0.11" provider-name="btibi,vargalex">
+<addon id="plugin.video.wofvideo" name="wofvideo" version="1.0.12" provider-name="btibi,vargalex">
 	<requires>
 		<import addon="script.module.beautifulsoup4" version="4.6.2"/>
 		<import addon="script.module.requests" version="2.22.0"/>
@@ -13,6 +13,7 @@
 		<language>hu</language>
 		<platform>all</platform>
 		<news>
+			1.0.12 - URL feloldás BugFix
 			1.0.11 - Főmenü átalakítása, megjelenés éve szerinti bontás, sorozatok javítása
 			1.0.10 - encrypted linkek támogatása, nexus támogatás
 			1.0.9 - modules __init__.py pótolva
