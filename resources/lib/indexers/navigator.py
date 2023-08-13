@@ -155,17 +155,10 @@ class navigator:
         soup = BeautifulSoup(page.text, 'html.parser')
         entryContent = soup.find('div', attrs={'class': 'entry-content'})
         link = entryContent.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
-        if link != None:
+        while link:
             page = session.get(link.get('href'))
             soup = BeautifulSoup(page.text, 'html.parser')
             link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
-            if link != None:
-                page = session.get(link.get('href'))
-                soup = BeautifulSoup(page.text, 'html.parser')
-                link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
-                if link != None:
-                    page = session.get(link.get('href'))
-                    soup = BeautifulSoup(page.text, 'html.parser')
         iframes = soup.find_all('iframe')
         for iframe in iframes:
             iframeSrc = iframe.get('src')
