@@ -2,7 +2,7 @@
 
 '''
     wofvideo Add-on
-    Copyright (C) 2020 btibi
+    Copyright (C) 2020 btibi, vargalex
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,9 +43,6 @@ if action == None:
 elif action == 'categories':
     n.getCategories()
 
-elif action == 'years':
-    n.getYears()
-
 elif action == 'search':
     n.getSearches()
 
@@ -57,6 +54,9 @@ elif action == 'seasons':
 
 elif action == 'episodes':
     n.getEpisodes(title, season, desc, url, img)
+
+elif action == 'getsources':
+    n.getSources(url)
 
 elif action == 'playmovie':
     n.playmovie(url)

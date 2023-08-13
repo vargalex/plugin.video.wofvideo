@@ -21,21 +21,24 @@
 import os,sys,re,xbmc,xbmcgui,xbmcplugin,xbmcaddon, locale, base64
 from bs4 import BeautifulSoup
 from requests import Session
-from resources.lib.modules.utils import py2_decode
+from resources.lib.modules.utils import py2_decode, py2_encode
+import resolveurl
 
 sysaddon = sys.argv[0] ; syshandle = int(sys.argv[1])
 addonFanart = xbmcaddon.Addon().getAddonInfo('fanart')
 
-base_url = 'https://wofvideo.club/'
+base_url = 'https://wofvideo.pro/'
 ajax_url = '%s%s' % (base_url, 'wp-admin/admin-ajax.php')
 session = Session()
 
 if sys.version_info[0] == 3:
     from xbmcvfs import translatePath
     from urllib.parse import urlparse
+    from urllib.parse import quote_plus
 else:
     from xbmc import translatePath
     from urlparse import urlparse
+    from urllib import quote_plus
 
 class navigator:
     def __init__(self):
@@ -51,14 +54,14 @@ class navigator:
 
     def root(self):
         self.addDirectoryItem("Kategóriák", "categories", '', 'DefaultFolder.png')
-        self.addDirectoryItem("Megjelenés éve", "years", '', 'DefaultFolder.png')
         self.addDirectoryItem("Keresés", "search", '', 'DefaultFolder.png')
         self.endDirectory()
 
     def getCategories(self):
-        page = session.get(base_url)
+        page = session.get("%s%s" % (base_url, "kategoriak"))
         soup = BeautifulSoup(page.text, 'html.parser')
-        for category in soup.find_all('li', attrs={'class': 'cat-item'}):
+        categories = soup.find('ul', attrs={'class': 'category-list'})
+        for category in categories.find_all('li'):
             link = category.find('a')
             matches = re.search(r'^(.*)\(([0-9]*)\)(.*)$', str(category), re.S)
             cnt = ''
@@ -67,41 +70,35 @@ class navigator:
             self.addDirectoryItem("%s%s" % (link.string, cnt), 'items&url=%s' % link.get('href'), '', 'DefaultFolder.png')
         self.endDirectory()
 
-    def getYears(self):
-        page = session.get(base_url)
-        soup = BeautifulSoup(page.text, 'html.parser')
-        years = soup.find('section', attrs={'id': 'torofilm_movies_annee-2'})
-        for yearli in years.find_all('li'):
-            link = yearli.find('a').get('href')
-            year = yearli.find('a').string
-            self.addDirectoryItem(year, 'items&url=%s' % link, '', 'DefaultFolder.png')
-        self.endDirectory()
-
     def getItems(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
         xbmc.log('wofvideo: load URL: %s' % url, xbmc.LOGINFO)
 
-        allmovies = soup.find('div', attrs={'class': 'aa-cn', 'id': 'aa-movies'})
-        movies = allmovies.find_all('li', attrs={'class': 'hentry'})
+        container = soup.find('div', attrs={'class': 'container'})
+        row = container.find('div', attrs={'class': 'row'})
+        movies = row.select("div.row.mb-10, div.grid-md.mb-30")
         for movie in movies:
-            movieTitle = movie.find('h2').string
-            moviePageUrl = movie.find('a').get('href')
+            postContent = movie.find('div', attrs={'class': 'post-content'})
+            postTitle = postContent.find('h3')
+            href = postTitle.find('a')
+            movieTitle = href.string
+            moviePageUrl = href.get('href')
             movieImg = movie.find('img').get('src')
+            plot = postContent.find('p').string.replace('Tartalom: ', '')
             sorozat = ''
-            action = 'playmovie'
-            isFolder = False
+            action = 'getsources'
             if 'series' in str(moviePageUrl):
                 sorozat = ' (sorozat)'
                 action = 'seasons'
-                isFolder = True
-            self.addDirectoryItem('[B]%s[/B]%s' % (movieTitle, sorozat), '%s&url=%s' % (action, moviePageUrl), movieImg, 'DefaultMovies.png', isFolder=isFolder, meta={'title': movieTitle, 'plot': ''})
+            self.addDirectoryItem('[B]%s[/B]%s' % (movieTitle, sorozat), '%s&url=%s' % (action, moviePageUrl), movieImg, 'DefaultMovies.png', isFolder=True, meta={'title': movieTitle, 'plot': plot})
 
-        navLinks = soup.find('div', attrs={'class': 'nav-links'})
-        if navLinks != None:
-            hrefs = navLinks.find_all('a')
-            if hrefs[len(hrefs)-1].string == 'NEXT':
-                self.addDirectoryItem('[I]Következö oldal[/I]', 'items&url=%s' % hrefs[len(hrefs)-1].get('href'), '', 'DefaultFolder.png')
+        pagination = soup.find('ul', attrs={'class': 'pagination'})
+        if pagination != None:
+            lastLi = pagination.find_all('li')[-1]
+            if lastLi.find('i') and 'xsicon-long-arrow-right' in lastLi.find('i').get('class'):
+                href = lastLi.find('a')
+                self.addDirectoryItem('[I]Következő oldal[/I]', 'items&url=%s' % href.get('href'), '', 'DefaultFolder.png')
         self.endDirectory('movies')
 
     def getSeasons(self, url):
@@ -142,47 +139,62 @@ class navigator:
         for episode in episodes:
             href = episode.find('a').get('href')
             episodeTitle = episode.find('a').string
-            self.addDirectoryItem('[B]%s[/B]' % episodeTitle, 'playmovie&url=%s' % href, img, 'DefaultMovies.png', isFolder=False, meta={'title': episodeTitle, 'plot': desc})
+            self.addDirectoryItem('[B]%s[/B]' % episodeTitle, 'getsources&url=%s' % href, img, 'DefaultMovies.png', isFolder=False, meta={'title': episodeTitle, 'plot': desc})
         self.endDirectory('episodes')
 
-    def playmovie(self, url):
+    def getSources(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank', 'class': 'maxbutton-1 maxbutton maxbutton-b1'})
+        entryHeader = soup.find('div', attrs={'class': 'entry-header'})
+        title = entryHeader.find('h1', attrs={'class': 'post-title'}).string
+        entryThumbnail = soup.find('div', attrs={'class': 'entry-thumbnail'})
+        img = entryThumbnail.find('img').get('src')
+        content = soup.find('div', attrs={'class': 'theiaPostSlider_preloadedSlide'})
+        plot = content.find_all('p')[1].string
+        page = session.get("%s/3" % url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        entryContent = soup.find('div', attrs={'class': 'entry-content'})
+        link = entryContent.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
         if link != None:
             page = session.get(link.get('href'))
             soup = BeautifulSoup(page.text, 'html.parser')
+            link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
+            if link != None:
+                page = session.get(link.get('href'))
+                soup = BeautifulSoup(page.text, 'html.parser')
+                link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
+                if link != None:
+                    page = session.get(link.get('href'))
+                    soup = BeautifulSoup(page.text, 'html.parser')
         iframes = soup.find_all('iframe')
         for iframe in iframes:
             iframeSrc = iframe.get('src')
-            if iframeSrc != None and not "player.twitch" in iframeSrc:
-                parsed_uri = urlparse(iframeSrc)
-                if len(parsed_uri.scheme) == 0:
-                    parsed_uri = urlparse(url)
-                    iframeSrc = "%s:%s" % (parsed_uri.scheme, iframeSrc)
-                page = session.get(iframeSrc)
-                soup = BeautifulSoup(page.text, 'html.parser')
-                playlist = soup.find('ul', attrs={'id': 'fwduvpPlaylist0'})
-                if playlist != None:
-                    videoSource = playlist.find('li').get('data-video-source')
-                    if videoSource != None:
-                        matches=re.search(r'^(.*)source:([^\']*)\'([^\']*)\'(.*)', videoSource, re.S)
-                        if matches != None:
-                            if "encrypt:" in matches.group(3):
-                                videoURL = base64.b64decode(matches.group(3).replace("encrypt:", "")).decode('utf-8')
-                            else:
-                                videoURL = matches.group(3)
-                            try:
-                                xbmc.log('wofvideo: playing URL: %s' % videoURL, xbmc.LOGINFO)
-                                play_item = xbmcgui.ListItem(path=videoURL)
-                                xbmcplugin.setResolvedUrl(syshandle, True, listitem=play_item)
-                            except Exception as e:
-                                xbmc.log('wofvideo: unable to playing URL: %s' % videoURL, xbmc.LOGERROR)
-                                xbmcgui.Dialog().notification(videoURL, str(e))
-                                return
+            parsed_uri = urlparse(iframeSrc)
+            srcHost = parsed_uri.netloc
+            if len(parsed_uri.scheme) == 0:
+                parsed_uri = urlparse(url)
+                iframeSrc = "%s:%s" % (parsed_uri.scheme, iframeSrc)
+                self.addDirectoryItem('[B]%s[/B]' % srcHost, 'playmovie&url=%s' % quote_plus(iframeSrc), img, 'DefaultMovies.png', isFolder=False, meta={'title': title, 'plot': plot})
+        self.endDirectory('movies')
+
+    def playmovie(self, url):
+        xbmc.log('WofVideo: resolving url: %s' % url, xbmc.LOGINFO)
+        try:
+            direct_url = resolveurl.resolve(url)
+            if direct_url:
+                direct_url = py2_encode(direct_url)
+        except Exception as e:
+            xbmcgui.Dialog().notification(urlparse.urlparse(url).hostname, str(e))
+            return
+        if direct_url:
+            xbmc.log('WofVideo: playing URL: %s' % direct_url, xbmc.LOGINFO)
+            play_item = xbmcgui.ListItem(path=direct_url)
+            xbmcplugin.setResolvedUrl(syshandle, True, listitem=play_item)
+        else:
+            xbmcgui.Dialog().ok("a", "empty")
                             
     def getSearches(self):
-        self.addDirectoryItem('Új keresés', 'newsearch', '', 'DefaultFolder.png')
+        self.addDirectoryItem('[COLOR lightgreen]Új keresés[/COLOR]', 'newsearch', '', 'DefaultFolder.png')
         try:
             file = open(self.searchFileName, "r")
             olditems = file.read().splitlines()
@@ -196,7 +208,7 @@ class navigator:
             for item in items:
                 self.addDirectoryItem(item, 'items&url=%s?s=%s' % (base_url, item), '', 'DefaultFolder.png')
             if len(items) > 0:
-                self.addDirectoryItem('Keresési előzmények törlése', 'deletesearchhistory', '', 'DefaultFolder.png') 
+                self.addDirectoryItem('[COLOR red]Keresési előzmények törlése[/COLOR]', 'deletesearchhistory', '', 'DefaultFolder.png') 
         except:
             pass   
         self.endDirectory()
