@@ -1,4 +1,7 @@
-﻿[B]1.0.13[/B]
+﻿[B]1.0.14[/B]
+- Leia bugFix (CSS selector helyett visszatérés a find_all használatára)
+
+[B]1.0.13[/B]
 - Forrás változás követése
 
 [B]1.0.12[/B]

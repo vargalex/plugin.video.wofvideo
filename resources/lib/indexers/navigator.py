@@ -77,7 +77,7 @@ class navigator:
 
         container = soup.find('div', attrs={'class': 'container'})
         row = container.find('div', attrs={'class': 'row'})
-        movies = row.select("div.row.mb-10, div.grid-md.mb-30")
+        movies = row.find_all('div', attrs={'class': re.compile("row.+mb-10|grid-md.+mb-30", re.I)})
         for movie in movies:
             postContent = movie.find('div', attrs={'class': 'post-content'})
             postTitle = postContent.find('h3')
