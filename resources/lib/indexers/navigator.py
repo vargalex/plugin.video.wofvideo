@@ -58,10 +58,10 @@ class navigator:
         self.endDirectory()
 
     def getCategories(self):
-        page = session.get("%s%s" % (base_url, "kategoriak"))
+        page = session.get(base_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        categories = soup.find('ul', attrs={'class': 'category-list'})
-        for category in categories.find_all('li'):
+        categories = soup.find_all('li', attrs={'class': 'cat-item'})
+        for category in categories:
             link = category.find('a')
             matches = re.search(r'^(.*)\(([0-9]*)\)(.*)$', str(category), re.S)
             cnt = ''
@@ -75,30 +75,26 @@ class navigator:
         soup = BeautifulSoup(page.text, 'html.parser')
         xbmc.log('wofvideo: load URL: %s' % url, xbmc.LOGINFO)
 
-        container = soup.find('div', attrs={'class': 'container'})
-        row = container.find('div', attrs={'class': 'row'})
-        movies = row.find_all('div', attrs={'class': re.compile("row.+mb-10|grid-md.+mb-30", re.I)})
-        for movie in movies:
-            postContent = movie.find('div', attrs={'class': 'post-content'})
-            postTitle = postContent.find('h3')
-            href = postTitle.find('a')
-            movieTitle = href.string
-            moviePageUrl = href.get('href')
-            movieImg = movie.find('img').get('src')
-            plot = postContent.find('p').string.replace('Tartalom: ', '')
-            sorozat = ''
-            action = 'getsources'
-            if 'series' in str(moviePageUrl):
-                sorozat = ' (sorozat)'
-                action = 'seasons'
-            self.addDirectoryItem('[B]%s[/B]%s' % (movieTitle, sorozat), '%s&url=%s' % (action, moviePageUrl), movieImg, 'DefaultMovies.png', isFolder=True, meta={'title': movieTitle, 'plot': plot})
+        ul = soup.find('ul', attrs={'class': 'post-lst'})
+        if ul:
+            movies = ul.find_all('article')
+            for movie in movies:
+                movieTitle = movie.find('h2', attrs={'class': 'entry-title'}).string
+                href = movie.find('a')
+                moviePageUrl = href.get('href')
+                movieImg = movie.find('img').get('src')
+                sorozat = ''
+                action = 'getsources'
+                if 'series' in str(moviePageUrl):
+                    sorozat = ' (sorozat)'
+                    action = 'seasons'
+                self.addDirectoryItem('[B]%s[/B]%s' % (movieTitle, sorozat), '%s&url=%s' % (action, moviePageUrl), movieImg, 'DefaultMovies.png', isFolder=True, meta={'title': movieTitle})
 
-        pagination = soup.find('ul', attrs={'class': 'pagination'})
-        if pagination != None:
-            lastLi = pagination.find_all('li')[-1]
-            if lastLi.find('i') and 'xsicon-long-arrow-right' in lastLi.find('i').get('class'):
-                href = lastLi.find('a')
-                self.addDirectoryItem('[I]Következő oldal[/I]', 'items&url=%s' % href.get('href'), '', 'DefaultFolder.png')
+            pagination = soup.find('div', attrs={'class': 'nav-links'})
+            if pagination != None:
+                lastLink = pagination.find_all('a')[-1]
+                if lastLink.string == 'NEXT':
+                    self.addDirectoryItem('[I]Következő oldal[/I]', 'items&url=%s' % lastLink.get('href'), '', 'DefaultFolder.png')
         self.endDirectory('movies')
 
     def getSeasons(self, url):
@@ -145,20 +141,24 @@ class navigator:
     def getSources(self, url):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        entryHeader = soup.find('div', attrs={'class': 'entry-header'})
-        title = entryHeader.find('h1', attrs={'class': 'post-title'}).string
-        entryThumbnail = soup.find('div', attrs={'class': 'entry-thumbnail'})
-        img = entryThumbnail.find('img').get('src')
-        content = soup.find('div', attrs={'class': 'theiaPostSlider_preloadedSlide'})
-        plot = content.find_all('p')[1].string
-        page = session.get("%s/3" % url)
-        soup = BeautifulSoup(page.text, 'html.parser')
+        entryHeader = soup.find('header', attrs={'class': 'entry-header'})
+        meta = entryHeader.find('div', attrs={'class': 'entry-meta'})
+        duration = meta.find('span', attrs={'class': 'duration'}).string
+        matches = re.search(r'([0-9]*)h ([0-9]*)m', duration)
+        if matches:
+            duration = int(matches.group(1))*60 + int(matches.group(2))
+        title = entryHeader.find('h1', attrs={'class': 'entry-title'}).string
+        postThumbnail = soup.find('div', attrs={'class': 'post-thumbnail'})
+        img = postThumbnail.find('img').get('src')
+        description = soup.find('div', attrs={'class': 'description'})
+        plot = description.find('p').string.strip()
         entryContent = soup.find('div', attrs={'class': 'entry-content'})
-        link = entryContent.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
-        while link:
-            page = session.get(link.get('href'))
-            soup = BeautifulSoup(page.text, 'html.parser')
-            link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
+        link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
+        page = session.get(link.get('href'))
+        soup = BeautifulSoup(page.text, 'html.parser')
+        link = soup.find('a', attrs={'rel': 'next', 'class': '_button'})
+        page = session.get(link.get('href'))
+        soup = BeautifulSoup(page.text, 'html.parser')
         iframes = soup.find_all('iframe')
         for iframe in iframes:
             iframeSrc = iframe.get('src')
@@ -167,7 +167,7 @@ class navigator:
             if len(parsed_uri.scheme) == 0:
                 parsed_uri = urlparse(url)
                 iframeSrc = "%s:%s" % (parsed_uri.scheme, iframeSrc)
-                self.addDirectoryItem('[B]%s[/B]' % srcHost, 'playmovie&url=%s' % quote_plus(iframeSrc), img, 'DefaultMovies.png', isFolder=False, meta={'title': title, 'plot': plot})
+            self.addDirectoryItem('[B]%s[/B]' % srcHost, 'playmovie&url=%s' % quote_plus(iframeSrc), img, 'DefaultMovies.png', isFolder=False, meta={'title': title, 'plot': plot})
         self.endDirectory('movies')
 
     def playmovie(self, url):
