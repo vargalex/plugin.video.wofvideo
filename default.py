@@ -56,7 +56,7 @@ elif action == 'episodes':
     n.getEpisodes(title, season, desc, url, img)
 
 elif action == 'getsources':
-    n.getSources(url)
+    n.getSources(url, title, desc, img)
 
 elif action == 'playmovie':
     n.playmovie(url)

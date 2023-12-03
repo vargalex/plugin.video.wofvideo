@@ -135,30 +135,41 @@ class navigator:
         for episode in episodes:
             href = episode.find('a').get('href')
             episodeTitle = episode.find('a').string
-            self.addDirectoryItem('[B]%s[/B]' % episodeTitle, 'getsources&url=%s' % href, img, 'DefaultMovies.png', isFolder=False, meta={'title': episodeTitle, 'plot': desc})
+            self.addDirectoryItem('[B]%s[/B]' % episodeTitle, 'getsources&url=%s&title=%s&desc=%s&img=%s' % (href, episodeTitle, desc, img), img, 'DefaultMovies.png', isFolder=True, meta={'title': episodeTitle, 'plot': desc})
         self.endDirectory('episodes')
 
-    def getSources(self, url):
+    def getSources(self, url, title, desc, img):
         page = session.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
         entryHeader = soup.find('header', attrs={'class': 'entry-header'})
-        meta = entryHeader.find('div', attrs={'class': 'entry-meta'})
-        duration = meta.find('span', attrs={'class': 'duration'}).string
-        matches = re.search(r'([0-9]*)h ([0-9]*)m', duration)
-        if matches:
-            duration = int(matches.group(1))*60 + int(matches.group(2))
-        title = entryHeader.find('h1', attrs={'class': 'entry-title'}).string
-        postThumbnail = soup.find('div', attrs={'class': 'post-thumbnail'})
-        img = postThumbnail.find('img').get('src')
-        description = soup.find('div', attrs={'class': 'description'})
-        plot = description.find('p').string.strip()
-        entryContent = soup.find('div', attrs={'class': 'entry-content'})
-        link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
-        page = session.get(link.get('href'))
-        soup = BeautifulSoup(page.text, 'html.parser')
-        link = soup.find('a', attrs={'rel': 'next', 'class': '_button'})
-        page = session.get(link.get('href'))
-        soup = BeautifulSoup(page.text, 'html.parser')
+        try:
+            meta = entryHeader.find('div', attrs={'class': 'entry-meta'})
+            duration = meta.find('span', attrs={'class': 'duration'}).string
+            matches = re.search(r'([0-9]*)h ([0-9]*)m', duration)
+            if matches:
+                duration = int(matches.group(1))*60 + int(matches.group(2))
+        except:
+            duration = 0
+        if not title:
+            title = entryHeader.find('h1', attrs={'class': 'entry-title'}).string
+        if not img:
+            postThumbnail = soup.find('div', attrs={'class': 'post-thumbnail'})
+            img = postThumbnail.find('img').get('src')
+        if not desc:
+            description = soup.find('div', attrs={'class': 'description'})
+            desc = description.find('p').string.strip()
+        try:
+            link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
+            page = session.get(link.get('href'))
+            soup = BeautifulSoup(page.text, 'html.parser')
+        except:
+            pass
+        try:
+            link = soup.find('a', attrs={'rel': 'next', 'class': '_button'})
+            page = session.get(link.get('href'))
+            soup = BeautifulSoup(page.text, 'html.parser')
+        except:
+            pass
         iframes = soup.find_all('iframe')
         for iframe in iframes:
             iframeSrc = iframe.get('src')
@@ -167,7 +178,7 @@ class navigator:
             if len(parsed_uri.scheme) == 0:
                 parsed_uri = urlparse(url)
                 iframeSrc = "%s:%s" % (parsed_uri.scheme, iframeSrc)
-            self.addDirectoryItem('[B]%s[/B]' % srcHost, 'playmovie&url=%s' % quote_plus(iframeSrc), img, 'DefaultMovies.png', isFolder=False, meta={'title': title, 'plot': plot})
+            self.addDirectoryItem('[B]%s[/B]' % srcHost, 'playmovie&url=%s' % quote_plus(iframeSrc), img, 'DefaultMovies.png', isFolder=False, meta={'title': title, 'plot': desc})
         self.endDirectory('movies')
 
     def playmovie(self, url):
