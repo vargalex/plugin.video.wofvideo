@@ -53,17 +53,27 @@ class navigator:
         self.searchFileName = os.path.join(self.base_path, "search.history")
 
     def root(self):
-        self.addDirectoryItem("Kategóriák", "categories", '', 'DefaultFolder.png')
+        page = session.get(base_url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        aside = soup.find('aside', attrs={'class': 'sidebar'})
+        sections = aside.find_all('section')
+        for section in sections:
+            title = section.find('h3', attrs={'class': 'widget-title'})
+            if title:
+                self.addDirectoryItem(title.string[title.string.find(' ') + 1:].replace(':', ''), "grouping&groupid=%s" % section.get('id'), '', 'DefaultFolder.png')
         self.addDirectoryItem("Keresés", "search", '', 'DefaultFolder.png')
         self.endDirectory()
 
-    def getCategories(self):
+    def getGrouping(self, groupid):
         page = session.get(base_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        categories = soup.find_all('li', attrs={'class': 'cat-item'})
-        for category in categories:
-            link = category.find('a')
-            matches = re.search(r'^(.*)\(([0-9]*)\)(.*)$', str(category), re.S)
+        aside = soup.find('aside', attrs={'class': 'sidebar'})
+        section = aside.find('section', attrs={'id': groupid})
+        ul = section.find('ul')
+        lis = ul.find_all('li')
+        for li in lis:
+            link = li.find('a')
+            matches = re.search(r'^(.*)\(([0-9]*)\)(.*)$', str(li), re.S)
             cnt = ''
             if matches != None:
                 cnt = " (%s)" % matches.group(2) 

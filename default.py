@@ -34,14 +34,15 @@ title = params.get('title')
 season = params.get('season')
 desc = params.get('desc')
 img = params.get('img')
+groupid = params.get('groupid')
 
 n = navigator.navigator()
 
 if action == None:
     n.root()
 
-elif action == 'categories':
-    n.getCategories()
+elif action == 'grouping':
+    n.getGrouping(groupid)
 
 elif action == 'search':
     n.getSearches()
