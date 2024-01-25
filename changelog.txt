@@ -1,4 +1,7 @@
-﻿[B]1.0.16[/B]
+﻿[B]1.0.17[/B]
+- Forrás változás követése
+
+[B]1.0.16[/B]
 - Sorozat kezelés javítása
 - Évszám szerinti listázás
 - Kezdőbetű szerinti listázás

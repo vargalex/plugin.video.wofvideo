@@ -124,11 +124,17 @@ class navigator:
                 desc = descDiv.find('p')
                 if desc != None:
                     desc = desc.string
-                    seasonUrl = descDiv.find('a').get('href')
+                    seasonUrl = descDiv.find('a', attrs={'class': 'maxbutton', 'rel': 'noopener', 'target': '_blank'})
                     if seasonUrl != None:
-                        page = session.get(seasonUrl)
+                        page = session.get(seasonUrl.get('href'))
                         soup = BeautifulSoup(page.text, 'html.parser')
                         entryContent = soup.find('div', attrs={'class': 'entry-content'})
+                        nextUrl = entryContent.find('a', attrs={'rel': 'next'})
+                        if nextUrl:
+                            seasonUrl = nextUrl.get('href')
+                            page = session.get(seasonUrl)
+                            soup = BeautifulSoup(page.text, 'html.parser')
+                            entryContent = soup.find('div', attrs={'class': 'entry-content'})
                         seasons =entryContent.find_all('ul')
                         seasonNr = 0
                         for season in seasons:
@@ -157,7 +163,7 @@ class navigator:
             duration = meta.find('span', attrs={'class': 'duration'}).string
             matches = re.search(r'([0-9]*)h ([0-9]*)m', duration)
             if matches:
-                duration = int(matches.group(1))*60 + int(matches.group(2))
+                duration = (int(matches.group(1))*60 + int(matches.group(2)))*60
         except:
             duration = 0
         if not title:
@@ -169,7 +175,7 @@ class navigator:
             description = soup.find('div', attrs={'class': 'description'})
             desc = description.find('p').string.strip()
         try:
-            link = soup.find('a', attrs={'rel': 'noopener', 'target': '_blank'})
+            link = soup.find('a', attrs={'class': 'maxbutton', 'rel': 'noopener', 'target': '_blank'})
             page = session.get(link.get('href'))
             soup = BeautifulSoup(page.text, 'html.parser')
         except:
@@ -188,7 +194,7 @@ class navigator:
             if len(parsed_uri.scheme) == 0:
                 parsed_uri = urlparse(url)
                 iframeSrc = "%s:%s" % (parsed_uri.scheme, iframeSrc)
-            self.addDirectoryItem('[B]%s[/B]' % srcHost, 'playmovie&url=%s' % quote_plus(iframeSrc), img, 'DefaultMovies.png', isFolder=False, meta={'title': title, 'plot': desc})
+            self.addDirectoryItem('[B]%s[/B]' % srcHost, 'playmovie&url=%s' % quote_plus(iframeSrc), img, 'DefaultMovies.png', isFolder=False, meta={'title': title, 'plot': desc, 'duration': duration})
         self.endDirectory('movies')
 
     def playmovie(self, url):
